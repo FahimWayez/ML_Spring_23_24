@@ -93,12 +93,12 @@ if __name__ == "__main__":
     visualize_data(X_train, y_train)
 
     # Memory error prevention by subsampling data. We sample 10000 training examples and 1000 test examples.
-    num_training = 100
+    num_training = 5000
     mask = list(range(num_training))
     X_train = X_train[mask]
     y_train = y_train[mask]
 
-    num_test = 10
+    num_test = 500
     mask = list(range(num_test))
     X_test = X_test[mask]
     y_test = y_test[mask]
