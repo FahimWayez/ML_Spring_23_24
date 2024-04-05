@@ -254,6 +254,9 @@ if __name__ == "__main__":
     euclidean_accuracy = accuracy_score(y_test, y_test_pred[0])
     manhattan_accuracy = accuracy_score(y_test, y_test_pred[1])
 
+    print("Euclidean Accuracy: ", euclidean_accuracy)
+    print("Manhattan Accuracy: ", manhattan_accuracy)
+    
     if euclidean_accuracy > manhattan_accuracy:
         print('Euclidean distance performed better.')
     elif euclidean_accuracy < manhattan_accuracy:
