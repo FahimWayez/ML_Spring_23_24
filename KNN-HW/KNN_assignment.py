@@ -2,13 +2,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 import data_utils
 import download
+from sklearn.metrics import accuracy_score
 
 def download_data():
     url = "https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz"
     download_dir = "./data"
-    download.maybe_download_and_extract(url,download_dir)
+    download.maybe_download_and_extract(url, download_dir)
 
-# Class to initialize and apply K-nearest neighbour classfier
+# Class to initialize and apply K-nearest neighbour classifier
 class KNearestNeighbor(object):
     def __init__(self):
         pass
@@ -19,15 +20,30 @@ class KNearestNeighbor(object):
         self.y_train = y
     
     # Method to predict labels of test examples using 'compute_distances' and 'predict_labels' methods.
-    def predict(self, X, k=1, num_loops=0):
-        if num_loops == 0:
-            dists = self.compute_distances(X)
-        else:
-            raise ValueError('Invalid value %d for num_loops' % num_loops)
-        return self.predict_labels(dists, k=k)
+    def predict(self, X, k=1, distance_metric=None):
+        if distance_metric is None:
+            distance_metric = ['euclidean', 'manhattan']  # Default to using both metrics
+        elif not isinstance(distance_metric, list):
+            distance_metric = [distance_metric]  # Convert to list if a single metric is provided
+
+        y_preds = []
+
+        for metric in distance_metric:
+            if metric == 'euclidean':
+                dists = self.compute_distances(X, metric='euclidean')
+            elif metric == 'manhattan':
+                dists = self.compute_distances(X, metric='manhattan')
+            else:
+                raise ValueError('Invalid distance metric provided')
+
+            y_pred = self.predict_labels(dists, k=k)
+            y_preds.append(y_pred)
+
+        # Return a list of predictions corresponding to each distance metric
+        return y_preds
 
     # Method to compute Euclidean distances from each text example to every training example  
-    def compute_distances(self, X):
+    def compute_distances(self, X, metric):
         num_test = X.shape[0]
         num_train = self.X_train.shape[0]
         dists = np.zeros((num_test, num_train))
@@ -37,10 +53,13 @@ class KNearestNeighbor(object):
         # dists variable given above. For each row, i, dist[i] should contain distances between test example i and every training example.
         for i in range(num_test):
             for j in range(num_train):
-                # Compute Euclidean distance
-                # dists[i, j] = np.sqrt(np.sum((X[i] - self.X_train[j]) ** 2))
-                # Compute Manhattan (L1) distance
-                dists[i, j] = np.sum(np.abs(X[i] - self.X_train[j]))
+                if metric == 'euclidean':
+                    dists[i, j] = np.sqrt(np.sum((X[i] - self.X_train[j]) ** 2))
+                elif metric == 'manhattan':
+                    dists[i, j] = np.sum(np.abs(X[i] - self.X_train[j]))
+                else:
+                    raise ValueError('Invalid distance metric provided')
+
         return dists
 
     # Method to predict labels of test examples using chosen value of k given Euclidean distances obtained from 'compute_distances' method.
@@ -52,7 +71,7 @@ class KNearestNeighbor(object):
         # dists[i]. Use k closest distances obtained to predict label of each dists[i]. Label of each dists[i] should be stored in y_pred[i].
         for i in range(num_test):
             # Find k-nearest neighbors for each test example
-            closest_y = []
+            # closest_y = []
             closest_y = self.y_train[np.argsort(dists[i])[:k]]
             # Predict the label which occurs most frequently
             y_pred[i] = np.argmax(np.bincount(closest_y))
@@ -122,18 +141,19 @@ if __name__ == "__main__":
     
     # Initialize classifier with training data
     classifier.train(X_train, y_train)
-    y_test_pred = classifier.predict(X_test, k=5)
-    
-    num_correct = np.sum(y_test_pred == y_test) # number of test examples correctly predicted, where y_test_pred
+    y_test_pred = classifier.predict(X_test, k=5, distance_metric=['euclidean', 'manhattan'])
+    for metric, y_pred in zip(['euclidean', 'manhattan'], y_test_pred):
+        num_correct = np.sum(y_pred == y_test)  # number of test examples correctly predicted, where y_test_pred
                                                 # should contain labels predicted by classifier
-    accuracy = float(num_correct) / num_test
-    print('Got %d / %d correct with k=5 => accuracy: %f' % (num_correct, num_test, accuracy))
-    # Accuracy above should be ~ 29-30%
+        accuracy = float(num_correct) / num_test            
+        print()
+        print('Got %d / %d correct with k=5 => accuracy: %f' % (num_correct, num_test, accuracy))
+        print()
+        # Accuracy above should be ~ 29-30%
 
     # Perform 5-fold cross validation to find optimal k from choices below
     num_folds = 5
-    # k_choices = [1, 3, 5, 8, 10, 12, 15, 20, 50, 100]
-    k_choices = [1, 3 , 5, 8, 10]
+    k_choices = [1, 3, 5, 8, 10]
 
     X_train_folds = []
     y_train_folds = []
@@ -142,80 +162,101 @@ if __name__ == "__main__":
     y_train_folds = np.array_split(y_train,num_folds)
     k_to_accuracies = {} # dictionary to hold validation accuracies for each k 
 
+    for distance_metric in ['euclidean', 'manhattan']:
+        print()
+        print(f"Evaluating using {distance_metric} distance metric:")
+        print()
 
-    for k in k_choices:
-        k_to_accuracies[k] = [] # each key, k, should hold its list of 5 validation accuracies
+        for k in k_choices:
+            k_to_accuracies[k] = [] # each key, k, should hold its list of 5 validation accuracies
+            
+            # For each fold of cross validation
+            for num_knn in range(0,num_folds):
+                # YOUR CODE HERE
+                # 1) Split training data into validation fold and training folds
+                # 2) Inititialize classifier with training folds and compute distances between 
+                #    examples in validation fold and training folds
+                # 3) Use classifier to predict labels of valdation fold for given k value
+                
+                # Split training data into validation fold and training folds
+                X_val_fold = X_train_folds[num_knn]
+                y_val_fold = y_train_folds[num_knn]
+
+                X_train_fold = np.concatenate([X_train_folds[i] for i in range(num_folds) if i != num_knn])
+                y_train_fold = np.concatenate([y_train_folds[i] for i in range(num_folds) if i != num_knn])
+
+                # Initialize classifier with training folds and compute distances between examples in validation fold and training folds
+                classifier.train(X_train_fold, y_train_fold)
+                dists_fold = classifier.compute_distances(X_val_fold, metric=distance_metric)
+
+                # Use classifier to predict labels of validation fold for given k value
+                y_val_pred = classifier.predict_labels(dists_fold, k=k)
+                
+                # number of test examples correctly predicted, where y_test_pred contains labels
+                # predicted by classifier on validation fold
+                num_correct = np.sum(y_val_pred == y_val_fold) 
+                accuracy = float(num_correct) / X_val_fold.shape[0]  # Use the number of validation examples for accuracy calculation
+                k_to_accuracies[k].append(accuracy)                
+                print('Got %d / %d correct => accuracy: %f' % (num_correct, X_val_fold.shape[0], accuracy))
+
+
+        print()
+        print("Printing our 5-fold accuracies for varying values of k:")
+        print()
+        for k in sorted(k_to_accuracies):
+            for accuracy in k_to_accuracies[k]:
+                print('k = %d, accuracy = %f' % (k, accuracy))
         
-        # For each fold of cross validation
-        for num_knn in range(0,num_folds):
-            # YOUR CODE HERE
-            # 1) Split training data into validation fold and training folds
-            # 2) Inititialize classifier with training folds and compute distances between 
-            #    examples in validation fold and training folds
-            # 3) Use classifier to predict labels of valdation fold for given k value
-            
-            # Split training data into validation fold and training folds
-            X_val_fold = X_train_folds[num_knn]
-            y_val_fold = y_train_folds[num_knn]
-
-            X_train_fold = np.concatenate([X_train_folds[i] for i in range(num_folds) if i != num_knn])
-            y_train_fold = np.concatenate([y_train_folds[i] for i in range(num_folds) if i != num_knn])
-
-            # Initialize classifier with training folds and compute distances between examples in validation fold and training folds
-            classifier.train(X_train_fold, y_train_fold)
-            dists_fold = classifier.compute_distances(X_val_fold)
-
-            # Use classifier to predict labels of validation fold for given k value
-            y_val_pred = classifier.predict_labels(dists_fold, k=k)
-            
-            # number of test examples correctly predicted, where y_test_pred contains labels
-            # predicted by classifier on validation fold
-            num_correct = np.sum(y_val_pred == y_val_fold) 
-            accuracy = float(num_correct) / X_val_fold.shape[0]  # Use the number of validation examples for accuracy calculation
-            k_to_accuracies[k].append(accuracy)
-
-            print('Got %d / %d correct => accuracy: %f' % (num_correct, X_val_fold.shape[0], accuracy))
-
-
-    print("Printing our 5-fold accuracies for varying values of k:")
-    print()
-    for k in sorted(k_to_accuracies):
-        for accuracy in k_to_accuracies[k]:
-            print('k = %d, accuracy = %f' % (k, accuracy))
-    
-    for k in sorted(k_to_accuracies):
-        print('k = %d, avg. accuracy = %f' % (k, sum(k_to_accuracies[k])/5))
-    
-    for k in k_choices:
-        accuracies = k_to_accuracies[k]
-        plt.scatter([k] * len(accuracies), accuracies)
+        for k in sorted(k_to_accuracies):
+            print('k = %d, avg. accuracy = %f' % (k, sum(k_to_accuracies[k])/5))
+        
+        for k in k_choices:
+            accuracies = k_to_accuracies[k]
+            plt.scatter([k] * len(accuracies), accuracies)
         plt.show()
 
-    # plot the trend line with error bars that correspond to standard deviation
+        # plot the trend line with error bars that correspond to standard deviation
 
-    accuracies_mean = np.array([np.mean(v) for k,v in sorted(k_to_accuracies.items())])
-    accuracies_std = np.array([np.std(v) for k,v in sorted(k_to_accuracies.items())])
-    plt.errorbar(k_choices, accuracies_mean, yerr=accuracies_std)
-    plt.title('Cross-validation on k')
-    plt.xlabel('k')
-    plt.ylabel('Cross-validation accuracy')
-    plt.savefig('cross-validation_accuracy.jpg')
-    plt.show()
+        accuracies_mean = np.array([np.mean(v) for k,v in sorted(k_to_accuracies.items())])
+        accuracies_std = np.array([np.std(v) for k,v in sorted(k_to_accuracies.items())])
+        plt.errorbar(k_choices, accuracies_mean, yerr=accuracies_std)
+        plt.title('Cross-validation on k')
+        plt.xlabel('k')
+        plt.ylabel('Cross-validation accuracy')
+        # plt.savefig('cross-validation_accuracy.jpg')
+        if distance_metric == 'euclidean':
+            plt.savefig('cross-validation_accuracy_euclidean.jpg')
+        else:
+            plt.savefig('cross-validation_accuracy_manhattan.jpg')
+        plt.show()
 
-    # YOUR CODE HERE
-    # Choose best value of k based on cross-validation results
-    # Intialize classifier and predict labels of test data, X_test, using best value of k
-    
-    best_k = k_choices[np.argmax(accuracies_mean)]
-    print("Best value of k:", best_k)
+        # YOUR CODE HERE
+        # Choose best value of k based on cross-validation results
+        # Intialize classifier and predict labels of test data, X_test, using best value of k
+        
+        best_k = k_choices[np.argmax(accuracies_mean)]
+        print()
+        print("Best value of k:", best_k)
+        print()
 
-    # Initialize classifier and predict labels of test data, X_test, using best value of k
-    classifier = KNearestNeighbor()
-    classifier.train(X_train, y_train)
-    y_test_pred = classifier.predict(X_test, k=best_k)
+        # Initialize classifier and predict labels of test data, X_test, using best value of k
+        classifier = KNearestNeighbor()
+        classifier.train(X_train, y_train)
+        y_test_pred = classifier.predict(X_test, k=best_k)
 
-    # Computing and displaying the accuracy for best k found during cross-validation
-    num_correct = np.sum(y_test_pred == y_test)
-    accuracy = float(num_correct) / num_test
-    print('Got %d / %d correct on test data => accuracy: %f' % (num_correct, num_test, accuracy))
-    # Accuracy above should be ~ 57-58% 
+        # Computing and displaying the accuracy for best k found during cross-validation
+        num_correct = np.sum(y_test_pred == y_test)
+        accuracy = float(num_correct) / num_test
+        print('Got %d / %d correct on test data => accuracy: %f' % (num_correct, num_test, accuracy))        
+        # Accuracy above should be ~ 57-58%     
+        
+    # Comparison between Euclidean and Manhattan distances
+    euclidean_accuracy = accuracy_score(y_test, y_test_pred[0])
+    manhattan_accuracy = accuracy_score(y_test, y_test_pred[1])
+
+    if euclidean_accuracy > manhattan_accuracy:
+        print('Euclidean distance performed better.')
+    elif euclidean_accuracy < manhattan_accuracy:
+        print('Manhattan distance performed better.')
+    else:
+        print('Both distance metrics performed equally.')
