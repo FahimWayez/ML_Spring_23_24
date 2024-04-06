@@ -96,7 +96,7 @@ def visualize_data(X_train, y_train):
 if __name__ == "__main__":
 
     # Download CIFAR10 data and store it in current directory if you have not done it.
-    #download_data()
+    download_data()
     cifar10_dir = './data/cifar-10-batches-py'
 
     # Load training and testing data from CIFAR10 dataset
@@ -225,9 +225,9 @@ if __name__ == "__main__":
         plt.ylabel('Cross-validation accuracy')
         # plt.savefig('cross-validation_accuracy.jpg')
         if distance_metric == 'euclidean':
-            plt.savefig('cross-validation_accuracy_euclidean.jpg')
+            plt.savefig('KNN-HW/cross-validation_accuracy_euclidean.jpg')
         else:
-            plt.savefig('cross-validation_accuracy_manhattan.jpg')
+            plt.savefig('KNN-HW/cross-validation_accuracy_manhattan.jpg')
         plt.show()
 
         # YOUR CODE HERE
