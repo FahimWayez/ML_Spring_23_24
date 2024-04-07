@@ -1,3 +1,4 @@
+# Instruction to execute: need to install the necessary libraries- numpy, matplotlib, sklearn and seaborn, then just hit the run button.
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
